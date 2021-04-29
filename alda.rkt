@@ -85,10 +85,10 @@
             (printf "here for: ~s, note is: ~s ~s ~s, ~s\n" next-voice p a o duration)
             (define csto (hash-ref sto next-voice))
             (define st (store-time csto))
-            (define end (+ time (/ (* 2 (default-sample-rate) tempo) duration 60)))
+            (define end (+ time (* (default-sample-rate) 60 4 (/ 1 tempo) (/ 1 duration))))
             (define sto*
               (hash-set sto next-voice (store last end key vol o q pan tempo duration)))
-            (values (list (list (midi->rsound (note->midi p a o) (- end st)) time))
+            (values (list (list (midi->rsound (note->midi p a o) (round (- end st))) (round time)))
                     sto*)])]))
          (define ln (hash-ref lines next-voice))
          (append new-rsounds
@@ -131,7 +131,9 @@
    (list (tempo #t 80))
    (hash (cons "violin" "violin-1")
          (list (octave #f 4)
-               (duration #f 2) (note 'f 0)
+               (duration #f 8) (note 'f 0)
+               (duration #f 8) (note 'e 0)
+               (duration #f 4) (note 'f 0)
                (duration #f 4) (note 'g 0)
                (note 'a 0)
                (duration #f 2) (note 'b -1)
@@ -161,4 +163,4 @@
                (octave #f 'up)
                (note 'f 0)))))
 
-(play (assemble (compile ex1 (hash))))
+(play (assemble (tee (compile ex1 (hash)))))
