@@ -1,0 +1,52 @@
+#lang racket/base
+
+(require ralda/lang/lexer ralda/lang/parser (prefix-in ast: ralda/ast)
+         (for-syntax racket/base racket/match syntax/parse))
+(provide (rename-out [alda:module-begin #%module-begin]
+                     [alda:read-syntax read-syntax])
+         #%datum
+         comp instrument elements octave note duration)
+
+(define (alda:read-syntax path in)
+  (datum->syntax #f `(module random ralda/lang/reader ,(parse path (lex in)))))
+
+(define-syntax alda:module-begin
+  (syntax-parser
+    [(_ body)
+     #'(#%module-begin
+        (define the-sound body)
+        (provide the-sound))]))
+
+(define-syntax comp
+  (syntax-parser
+    [(_ bodies ...)
+     #'(ast:comp '() (hash bodies ...))]))
+
+(define-syntax instrument
+  (syntax-parser
+    [(_ id:id)
+     #'(symbol->string 'id)]))
+
+(define-syntax elements
+  (syntax-parser
+    [(_ exprs ...) #'(list exprs ...)]))
+
+(define-syntax octave
+  (syntax-parser
+    [(_ val)
+     (match (syntax->datum #'val)
+       [">" #'(ast:octave #f 'up)]
+       ["<" #'(ast:octave #f 'down)]
+       [_ #'(ast:octave #f val)])]))
+
+(define-syntax note
+  (syntax-parser
+    [(_ pitch accidentals ...)
+     #`(ast:note
+        'pitch
+        #,(for/sum ([a (syntax->list #'(accidentals ...))])
+            (match (syntax->datum a) ["+" 1] ["-" -1])))]))
+
+(define-syntax duration
+  (syntax-parser
+    [(_ n:number) #'(ast:duration #f n)]))

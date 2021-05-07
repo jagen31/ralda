@@ -1,32 +1,12 @@
 #lang racket
+
 (require lens lens/data unstable/lens
+         ralda/ast
          rsound rsound/envelope rsound/piano-tones)
 
+(provide (rename-out [compile* alda->rsound]))
+
 (module+ test (require rackunit))
-
-(struct comp [attributes lines] #:transparent)
-(struct line [instruments elements] #:transparent)
-(define-struct-lenses line)
-;; an instrument is a string or a (cons string string)
-
-(struct chord [elements])
-(struct note [pitch accidental] #:transparent)
-(struct rest [] #:transparent)
-
-(struct attribute [global?] #:transparent)
-;; attributes
-(struct key-sig [sig])
-(struct duration attribute [len] #:transparent)
-(struct octave attribute [num] #:transparent)
-(struct panning attribute [pan])
-(struct quantization attribute [quant])
-(struct tempo attribute [bpm] #:transparent)
-(struct track-volume attribute [volume])
-(struct transposition attribute [semitones])
-(struct volume attribute [volume] #:transparent)
-
-(struct store [last time key volume octave quantization panning tempo duration] #:transparent)
-(define-struct-lenses store)
 
 (define ~> lens-thrush)
 
@@ -115,6 +95,8 @@
 
 ;(interpret-attribute "violin" (octave #f 20) (hash "violin" default-store))
 
+(define (compile* c) (assemble (compile c (hash))))
+
 #;(define sample-store
   (make-immutable-hash
    (list (cons (cons "violin" "violin-1")
@@ -162,5 +144,3 @@
                (duration #f 2) (note 'b -1)
                (octave #f 'up)
                (note 'f 0)))))
-
-(play (assemble (tee (compile ex1 (hash)))))
