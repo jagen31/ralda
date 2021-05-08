@@ -49,9 +49,12 @@
     (define next-voice
       (for/fold ([vo #f] [s +inf.0] #:result vo)
                 ([(k v) (in-hash sto)])
-        (if (< (store-time v) s)
-            (values k (store-time v))
-            (values vo s))))
+        (cond [(< (store-time v) s) (values k (store-time v))]
+              [(= (store-time v) s)
+               (match (store-last v)
+                 [(attribute _) (values k (store-time v))]
+                 [_ (values vo s)])]
+              [else (values vo s)])))
     (match next-voice
       [#f '()]
       [_
@@ -62,7 +65,6 @@
            [#f (values '() sto)]
            [(attribute _) (values '() (interpret-attribute next-voice last sto))]
            [(note p a)
-            (printf "here for: ~s, note is: ~s ~s ~s, ~s\n" next-voice p a o duration)
             (define csto (hash-ref sto next-voice))
             (define st (store-time csto))
             (define end (+ time (* (default-sample-rate) 60 4 (/ 1 tempo) (/ 1 duration))))

@@ -1,11 +1,11 @@
 #lang racket/base
 
 (require ralda/lang/lexer ralda/lang/parser (prefix-in ast: ralda/ast)
-         (for-syntax racket/base racket/match syntax/parse))
+         (for-syntax racket/base racket/list racket/match syntax/parse))
 (provide (rename-out [alda:module-begin #%module-begin]
                      [alda:read-syntax read-syntax])
          #%datum
-         comp instrument elements octave note duration)
+         comp instrument elements octave note duration tempo)
 
 (define (alda:read-syntax path in)
   (datum->syntax #f `(module random ralda/lang/reader ,(parse path (lex in)))))
@@ -20,7 +20,13 @@
 (define-syntax comp
   (syntax-parser
     [(_ bodies ...)
-     #'(ast:comp '() (hash bodies ...))]))
+     #:do [(define-values (attrs other)
+             (splitf-at (syntax->list #'(bodies ...))
+                        (λ(b) (syntax-parse b
+                                [({~literal instrument} _ ...) #f] [_ #t]))))]
+     #:with (attrs* ...) attrs
+     #:with (other* ...) other
+     #'(ast:comp (list attrs* ...) (hash other* ...))]))
 
 (define-syntax instrument
   (syntax-parser
@@ -50,3 +56,8 @@
 (define-syntax duration
   (syntax-parser
     [(_ n:number) #'(ast:duration #f n)]))
+
+(define-syntax (tempo stx)
+  (syntax-parse stx
+    [(_ n:number) #'(ast:tempo #f n)]
+    [(_ global n:number) #'(ast:tempo #t n)]))
