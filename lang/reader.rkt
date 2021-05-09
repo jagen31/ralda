@@ -3,12 +3,19 @@
 (require ralda/lang/lexer ralda/lang/parser (prefix-in ast: ralda/ast)
          (for-syntax racket/base racket/list racket/match syntax/parse))
 (provide (rename-out [alda:module-begin #%module-begin]
-                     [alda:read-syntax read-syntax])
+                     [alda:read-syntax read-syntax]
+                     [alda:get-info get-info])
          #%datum
          comp instrument elements octave note duration tempo)
 
 (define (alda:read-syntax path in)
   (datum->syntax #f `(module random ralda/lang/reader ,(parse path (lex in)))))
+
+(define (alda:get-info in mod line col pos)
+  (lambda (key default)
+    (case key
+      [(color-lexer) (color-lex)]
+      [else default])))
 
 (define-syntax alda:module-begin
   (syntax-parser
