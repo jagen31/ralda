@@ -17,6 +17,14 @@
       [(color-lexer) (color-lex)]
       [else default])))
 
+(define-for-syntax (unwrap-note-durs bodies)
+  (for/foldr ([acc '()])
+             ([b bodies])
+    (syntax-parse b
+      [({~datum note-dur} n d) (list* #'d #'n acc)]
+      [({~datum note-dur} n) (cons #'n acc)]
+      [_ (cons b acc)])))
+
 (define-syntax alda:module-begin
   (syntax-parser
     [(_ body)
@@ -30,7 +38,7 @@
      #:do [(define-values (attrs other)
              (splitf-at (syntax->list #'(bodies ...))
                         (λ(b) (syntax-parse b
-                                [({~literal instrument} _ ...) #f] [_ #t]))))]
+                                [({~datum instrument} _ ...) #f] [_ #t]))))]
      #:with (attrs* ...) attrs
      #:with (other* ...) other
      #'(ast:comp (list attrs* ...) (hash other* ...))]))
@@ -42,7 +50,11 @@
 
 (define-syntax elements
   (syntax-parser
-    [(_ exprs ...) #'(list exprs ...)]))
+    [(_ exprs ...)
+     #:with (exprs* ...) (unwrap-note-durs (syntax->list #'(exprs ...)))
+     (println #'(exprs ...))
+     (println #'(exprs* ...))
+     #'(list exprs* ...)]))
 
 (define-syntax octave
   (syntax-parser
