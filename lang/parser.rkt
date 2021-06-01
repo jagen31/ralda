@@ -2,12 +2,12 @@
 
 comp: @attribute* @line*
 line: instrument /COLON elements
-instrument: ID
+instrument: ID STRING?
 elements: @object*
-object: @note-dur | @attribute | /MEASURE ;perhaps do something with this?
+object: @note-dur | @attribute | /MEASURE ; perhaps do something with this?
 note-dur: note duration? 
 note: NOTE @accidental*
-duration: NUMBER
+duration: NUMBER (/SLASH NUMBER)?
 attribute: tempo | octave
 tempo: /LPAREN (/TEMPO GLOBAL? NUMBER) /RPAREN
 octave: /OCTAVE NUMBER | LBROCKET | RBROCKET

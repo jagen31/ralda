@@ -5,8 +5,8 @@
 
 (define-tokens music
   (ID COLON NOTE REST MEASURE GLOBAL
-   LPAREN RPAREN
-   SHARP FLAT OCTAVE LBROCKET RBROCKET
+   LPAREN RPAREN STRING
+   SHARP FLAT OCTAVE LBROCKET RBROCKET SLASH
    TEMPO NUMBER WHITESPACE))
 
 (define lexe
@@ -24,11 +24,15 @@
    ["r" (token-REST lexeme)]
    ["|" (token-MEASURE lexeme)]
    ["!" (token-GLOBAL lexeme)]
+   ["/" (token-SLASH lexeme)]
+   [(:: #\" (:* (:~ #\")) #\") (token-STRING lexeme)]
    ["tempo" (token-TEMPO (string->symbol lexeme))]
    [(:+ alphabetic) (token-ID (string->symbol lexeme))]
    [(eof) (void)]
    [whitespace (token 'WHITESPACE lexeme #:skip? #t)]))
 
+;; from
+;; https://github.com/soegaard/minipascal/blob/master/minipascal/mini-pascal-lexer.rkt
 (define (syn-val a b c d e)
   (values a ; string with matching text
           b ; symbol in '(comment white-space no-color eof)
@@ -55,17 +59,19 @@
    ["r" (my-values 'constant #f)]
    ["|" (my-values 'symbol #f)]
    ["!" (my-values 'keyword #f)]
+   ["/" (my-values 'constant #f)]
+   [(:: #\" (:* (:~ #\")) #\") (my-values 'constant #f)]
    ["tempo" (my-values 'keyword #f)]
    [(:+ alphabetic) (my-values 'symbol #f)]
    [(eof) (my-values 'eof #f)]
    [whitespace (my-values 'white-space #f)]))
 
 ;; *sigh*, parser expects a function that produces generator from port,
-;; drracket does not.
 (define (lex src)
   (define (next) (lexe src))
   next)
 
+;; ...while drracket does not.
 (define (color-lex)
   (define (next src) (color-lexe src))
   next)

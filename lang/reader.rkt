@@ -37,8 +37,8 @@
 
 (define-syntax instrument
   (syntax-parser
-    [(_ id:id)
-     #'(symbol->string 'id)]))
+    [(_ id:id) #'(symbol->string 'id)]
+    [(_ id:id name) #'(cons (symbol->string 'id) name)]))
 
 (define-syntax elements
   (syntax-parser
@@ -62,7 +62,8 @@
 
 (define-syntax duration
   (syntax-parser
-    [(_ n:number) #'(ast:duration #f n)]))
+    [(_ n:number) #'(ast:duration #f n)]
+    [(_ n:number d:number) #'(ast:duration #f (/ n d))]))
 
 (define-syntax (tempo stx)
   (syntax-parse stx
