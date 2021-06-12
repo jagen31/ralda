@@ -1,6 +1,7 @@
-#lang racket
+#lang racket/base
 
-(require lens lens/data unstable/lens
+(require racket/match racket/dict racket/function racket/runtime-path
+         lens lens/data sf2-parser
          ralda/ast
          rsound rsound/envelope rsound/piano-tones)
 
@@ -22,11 +23,9 @@
   (for/hash ([(k v) (in-hash tgts)])
     (values k (lens-set lens v new-views))))
 
-(define (make-piano tone len)
-  (rs-mult (piano-tone tone) ((adsr 2 1.0 2 1.0 (round (* 1/4 len))) len)))
-
-(define (midi->rsound tone len)
-  (make-piano tone len))
+(define (make-sound inst tone len)
+  (rs-mult (instrument-midi->rsound fluid inst tone)
+           ((adsr 2 1.0 2 1.0 (round (* 1/4 len))) len)))
 
 (define (note->midi p a o)
   (+ (match p ['c 0] ['d 2] ['e 4] ['f 5] ['g 7] ['a 9] ['b 11])
@@ -35,6 +34,13 @@
 
 (define (tee v) (print v) v)
 (define default-store (store #f 0 #f 50 4 100 0 120 4))
+
+(define-runtime-path soundfont-path "soundfont")
+(define fluid
+  (parse-soundfont
+   (open-input-file
+    (build-path soundfont-path "FluidR3_GM.sf2"))))
+
 
 (define (compile c sto)
   (define init-store
@@ -70,7 +76,15 @@
             (define end (+ time (* (default-sample-rate) 60 4 (/ 1 tempo) (/ 1 duration))))
             (define sto*
               (hash-set sto next-voice (store last end key vol o q pan tempo duration)))
-            (values (list (list (midi->rsound (note->midi p a o) (round (- end st))) (round time)))
+            (define inst
+              (match next-voice
+                [(cons inst _) inst]
+                [inst inst]))
+            (println (note->midi p a o))
+            (values (list (list (make-sound inst
+                                            (note->midi p a o)
+                                            (round (- end st)))
+                                (round time)))
                     sto*)])]))
          (define ln (hash-ref lines next-voice))
          (append new-rsounds
@@ -146,3 +160,5 @@
                (duration #f 2) (note 'b -1)
                (octave #f 'up)
                (note 'f 0)))))
+
+(instrument-midi->rsound fluid "Violin" 65)

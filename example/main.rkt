@@ -1,4 +1,4 @@
 #lang racket
-(require ralda ralda/example/example2 rsound)
+(require ralda ralda/example/example rsound)
 
 (play (alda->rsound the-sound))
