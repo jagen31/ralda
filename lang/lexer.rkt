@@ -27,7 +27,8 @@
    ["/" (token-SLASH lexeme)]
    [(:: #\" (:* (:~ #\")) #\") (token-STRING lexeme)]
    ["tempo" (token-TEMPO (string->symbol lexeme))]
-   [(:+ alphabetic) (token-ID (string->symbol lexeme))]
+   [(:: alphabetic alphabetic (:+ (:or alphabetic numeric "-" "_")))
+    (token-ID (string->symbol lexeme))]
    [(eof) (void)]
    [whitespace (token 'WHITESPACE lexeme #:skip? #t)]))
 
@@ -62,7 +63,8 @@
    ["/" (my-values 'constant #f)]
    [(:: #\" (:* (:~ #\")) #\") (my-values 'constant #f)]
    ["tempo" (my-values 'keyword #f)]
-   [(:+ alphabetic) (my-values 'symbol #f)]
+   [(:: alphabetic alphabetic (:+ (:or alphabetic numeric "-" "_")))
+    (my-values 'symbol #f)]
    [(eof) (my-values 'eof #f)]
    [whitespace (my-values 'white-space #f)]))
 

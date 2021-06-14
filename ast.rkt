@@ -1,10 +1,20 @@
 #lang racket/base
 
-(require lens)
+(require lens racket/match)
 (provide (all-defined-out))
 
 (struct comp [attributes lines] #:transparent)
-;; an instrument is a string or a (cons string string)
+;; a line is a dict from Instrument to List of attribute/note/rest
+;; an Instrument is a string or a (cons string string)
+(define (voice-instrument v)
+  (match v
+    [(cons inst _) inst]
+    [_ v]))
+
+(define (voice-name v)
+  (match v
+    [(cons _ name) name]
+    [_ v]))
 
 (struct chord [elements])
 (struct note [pitch accidental] #:transparent)

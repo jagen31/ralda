@@ -6,7 +6,7 @@
                      [alda:read-syntax read-syntax]
                      [alda:get-info get-info])
          #%datum
-         comp instrument elements octave note duration tempo)
+         comp instrument elements octave note rest duration tempo)
 
 (define (alda:read-syntax path in)
   (datum->syntax #f `(module random ralda/lang/reader ,(parse path (lex in)))))
@@ -52,8 +52,6 @@
   (syntax-parser
     [(_ exprs ...)
      #:with (exprs* ...) (unwrap-note-durs (syntax->list #'(exprs ...)))
-     (println #'(exprs ...))
-     (println #'(exprs* ...))
      #'(list exprs* ...)]))
 
 (define-syntax octave
@@ -71,6 +69,9 @@
         'pitch
         #,(for/sum ([a (syntax->list #'(accidentals ...))])
             (match (syntax->datum a) ["+" 1] ["-" -1])))]))
+
+(define-syntax rest
+  (syntax-parser [(_) #'(ast:rest)]))
 
 (define-syntax duration
   (syntax-parser

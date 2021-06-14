@@ -23,8 +23,8 @@
   (for/hash ([(k v) (in-hash tgts)])
     (values k (lens-set lens v new-views))))
 
-(define (make-sound inst tone len)
-  (rs-mult (instrument-midi->rsound fluid inst tone)
+(define (make-sound preset tone len)
+  (rs-mult (preset-midi->rsound preset tone len)
            ((adsr 2 1.0 2 1.0 (round (* 1/4 len))) len)))
 
 (define (note->midi p a o)
@@ -43,14 +43,19 @@
 
 
 (define (compile c sto)
-  (define init-store
+  (define-values (init-store preset-map)
     (match c
       [(comp attributes lines)
        ;; initialize the store
-       (define sto* (for/fold ([sto sto])
-                              ([(k _) (in-dict lines)])
-                      (hash-set sto k default-store)))
-       (foldl (curry interpret-attribute #f) sto* attributes)]))
+       (define-values (sto* presets*)
+         (for/fold ([sto sto] [presets (hash)])
+                   ([(k _) (in-dict lines)])
+           (values (hash-set sto k default-store)
+                   (hash-set presets
+                             (voice-instrument k)
+                             (load-preset fluid (voice-instrument k))))))
+       (values (foldl (curry interpret-attribute #f) sto* attributes) presets*)]))
+  (define factor (/ 1 (hash-count (comp-lines c))))
   (define (compile lines sto)
     (define next-voice
       (for/fold ([vo #f] [s +inf.0] #:result vo)
@@ -70,21 +75,23 @@
          (match last
            [#f (values '() sto)]
            [(attribute _) (values '() (interpret-attribute next-voice last sto))]
-           [(note p a)
+           [_
             (define csto (hash-ref sto next-voice))
             (define st (store-time csto))
             (define end (+ time (* (default-sample-rate) 60 4 (/ 1 tempo) (/ 1 duration))))
             (define sto*
               (hash-set sto next-voice (store last end key vol o q pan tempo duration)))
-            (define inst
-              (match next-voice
-                [(cons inst _) inst]
-                [inst inst]))
-            (println (note->midi p a o))
-            (values (list (list (make-sound inst
-                                            (note->midi p a o)
-                                            (round (- end st)))
-                                (round time)))
+            (values (list
+                     (list
+                      (match last
+                        [(note p a)
+                         (rs-scale factor
+                                   (make-sound (hash-ref preset-map
+                                                         (voice-instrument next-voice))
+                                               (note->midi p a o)
+                                               (round (- end st))))]
+                        [(rest) (silence (round (- end st)))])
+                      (round time)))
                     sto*)])]))
          (define ln (hash-ref lines next-voice))
          (append new-rsounds
@@ -109,56 +116,4 @@
        (match o ['up add1] ['down sub1] [n (λ(_) n)]))
      (lens-transform (line-lens store-octave-lens) sto f)]))
 
-;(interpret-attribute "violin" (octave #f 20) (hash "violin" default-store))
-
-(define (compile* c) (assemble (compile c (hash))))
-
-#;(define sample-store
-  (make-immutable-hash
-   (list (cons (cons "violin" "violin-1")
-               (store false 0 false 50 4 100 0 80 4))
-         (cons (cons "violin" "violin-2")
-               (store false 0 false 50 4 100 0 80 4))
-         (cons "cello" (store false 0 false 50 4 100 0 80 4))
-         (cons "viola" (store false 0 false 50 4 100 0 80 4)))))
-
-;(interpret-attribute "violin" (octave #f 20) (hash "violin" default-store))
-
-(define ex1
-  (comp
-   (list (tempo #t 80))
-   (hash (cons "violin" "violin-1")
-         (list (octave #f 4)
-               (duration #f 8) (note 'f 0)
-               (duration #f 8) (note 'e 0)
-               (duration #f 4) (note 'f 0)
-               (duration #f 4) (note 'g 0)
-               (note 'a 0)
-               (duration #f 2) (note 'b -1)
-               (note 'a 0))
-         (cons "violin" "violin-2")
-         (list (octave #f 4)
-               (duration #f 2) (note 'c 0)
-               (duration #f 4) (note 'e 0)
-               (note 'f 0)
-               (duration #f 2) (note 'f 0)
-               (note 'f 0))
-         "viola"
-         (list (octave #f 3)
-               (duration #f 2) (note 'a 0)
-               (octave #f 'up)
-               (duration #f 4) (note 'c 0)
-               (note 'c 0)
-               (duration #f 2) (note 'd 0)
-               (note 'c 0))
-         "cello"
-         (list (octave #f 3)
-               (duration #f 2) (note 'f 0)
-               (duration #f 4) (note 'c 0)
-               (note 'f 0)
-               (octave #f 'down)
-               (duration #f 2) (note 'b -1)
-               (octave #f 'up)
-               (note 'f 0)))))
-
-(instrument-midi->rsound fluid "Violin" 65)
+(define (compile* c) (rs-maximize-volume (assemble (compile c (hash)))))
